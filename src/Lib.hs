@@ -1,10 +1,15 @@
 module Lib
     (
+	Loops,
         newLoops,       
+	draw,
+	step,
+	mkTransFunc
     ) where
 
 import Data.Array
 import Data.Char
+import System.Console.ANSI
 
 
 newtype Loops = Loops { runLoops :: Array (Int, Int) Int }
@@ -37,15 +42,15 @@ fromLulz = Loops . lulzToArray . ((fmap.fmap) digitToInt)
 
 neighbors :: Array (Int, Int) Int -> (Int, Int) -> [Int]
 neighbors arr (x, y) = [get x y] ++
+                       [get (x-1) y] ++
                        [get x (y+1)] ++
                        [get (x+1) y] ++
-                       [get x (y-1)] ++
-                       [get (x-1) y]
+                       [get x (y-1)]
     where
         ((_, _), (b1, b2)) = bounds arr
         rowb = b1 - 1
         colb = b2 - 1
-        get row col = arr ! (row `rem` rowb, col `rem` colb)
+        get row col = arr ! (row `mod` rowb, col `mod` colb)
 
 
 shift :: (Int, Int) -> [((Int, Int), Int)] -> [((Int, Int), Int)]
@@ -63,7 +68,7 @@ resize l dim@(x,y) = Loops $ (zeros dim) // (shift s (assocs (runLoops l)))
 
 
 digsToInt :: [Int] -> Int
-digsToInt = go 0
+digsToInt = (go 0) . reverse
     where
         go pow []   = 0
         go pow digs = ((head digs) * (10 ^ pow)) + go (pow + 1) (tail digs)  
@@ -73,8 +78,21 @@ newLoops :: (Int, Int) -> Loops
 newLoops = resize (fromLulz startLoop)
 
 
-splitTrans :: String -> (Int, Int)
-splitTrans s = (read (take 5 s), read (drop 5 s))
+splitTrans :: String -> (String, String)
+splitTrans s = ((take 5 s), (drop 5 s))
+
+
+rotations :: [a] -> [[a]]
+rotations list = go l [] list
+    where 
+        l           = length list
+	rotOnce ls  = (tail ls) ++ [head ls]
+        go 0 acc ls = acc
+        go x acc ls = go (x - 1) (acc ++ [rotOnce ls]) (rotOnce ls)
+
+
+transRotations :: (String, String) -> [(String, String)]
+transRotations (s1, s2) = fmap (\r -> (([head s1] ++ r), s2)) $ (rotations . tail) s1
 
 
 relToFunc :: Eq a => [(a, a)] -> (a -> a)
@@ -86,7 +104,11 @@ relToFunc (x:xs) = \y ->
 
 
 mkTransFunc :: [String] -> (Int -> Int)
-mkTransFunc strs = relToFunc (fmap splitTrans strs)
+mkTransFunc strs = relToFunc (asNums tups)
+    where
+        toNum = (digsToInt . (fmap digitToInt))
+        asNums = fmap (\(s1, s2) -> (toNum s1, toNum s2))
+        tups = concatMap (transRotations . splitTrans) strs
 
 
 neighborList :: Array (Int, Int) Int -> [Int]
@@ -98,3 +120,15 @@ step trans loop = Loops $ listArray (bounds arr) newList
     where 
         arr     = runLoops loop
         newList = fmap trans (neighborList arr)
+
+
+drawCell :: ((Int, Int), Int) -> IO ()
+drawCell ((x, y), z) = do
+    setCursorPosition (x * 2) y
+    putChar z
+    setCursorPosition (x * 2 + 1) y
+    putChar z
+
+
+draw :: Loops -> IO ()
+draw = sequence_ . (fmap drawCell) . assocs . runLoops
