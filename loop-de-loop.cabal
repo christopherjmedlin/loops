@@ -35,6 +35,7 @@ library
       ansi-terminal
     , array
     , base >=4.7 && <5
+    , unix
   default-language: Haskell2010
 
 executable loop-de-loop-exe
@@ -49,6 +50,7 @@ executable loop-de-loop-exe
     , array
     , base >=4.7 && <5
     , loop-de-loop
+    , unix
   default-language: Haskell2010
 
 test-suite loop-de-loop-test
@@ -64,4 +66,5 @@ test-suite loop-de-loop-test
     , array
     , base >=4.7 && <5
     , loop-de-loop
+    , unix
   default-language: Haskell2010

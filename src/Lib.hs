@@ -123,12 +123,25 @@ step trans loop = Loops $ listArray (bounds arr) newList
 
 
 drawCell :: ((Int, Int), Int) -> IO ()
+drawCell (_, 0) = return ()
 drawCell ((x, y), z) = do
-    setCursorPosition (x * 2) y
-    putChar z
-    setCursorPosition (x * 2 + 1) y
-    putChar z
+    setSGR [SetColor Foreground Vivid (getColor z)]
+    setCursorPosition y (x*2)
+    putStr "█"
+    setCursorPosition y (x*2 + 1)
+    putStr "█"
 
+
+getColor :: Int -> Color
+getColor 0 = Black
+getColor 1 = White
+getColor 2 = Red
+getColor 3 = Green
+getColor 4 = Cyan
+getColor 5 = Magenta
+getColor 6 = Yellow
+getColor 7 = Blue
+getColor x = Red
 
 draw :: Loops -> IO ()
 draw = sequence_ . (fmap drawCell) . assocs . runLoops
